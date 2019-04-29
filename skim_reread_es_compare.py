@@ -1,8 +1,11 @@
 '''
-The early stopping model with only a stopping module.
+A PyTorch model with Skimming, rereading, and early stopping.
 
 Use REINFORCE with baseline.
-Use discounted rewards for an episode.
+
+Reward function:
+Use a single reward for an episode.
+If the prediction is correct, the reward is 1. Else the reward is -1.
 '''
 import torch
 from torch import optim
@@ -18,12 +21,11 @@ import random
 import argparse
 
 from networks import CNN_LSTM, Policy_C, Policy_N, Policy_S, ValueNetwork
-from utils import sample_policy_c, sample_policy_n, sample_policy_s, evaluate_earlystop, compute_policy_value_losses
+from utils import sample_policy_c, sample_policy_n, sample_policy_s, evaluate, compute_policy_value_losses
 from utils import cnn_cost, clstm_cost, c_cost, n_cost, s_cost
 
 desc = '''
-The early stopping model with only a stopping module.
-
+A PyTorch model with Skimming, rereading, and early stopping.
 Use REINFORCE with baseline.
 Use discounted rewards for an episode.
 '''
@@ -50,7 +52,6 @@ TEXT = data.Field(sequential=True, tokenize='spacy', lower=True, fix_length=400)
 LABEL = data.LabelField(dtype=torch.float)
 
 print('Splitting data...')
-# download the IMDB dataset
 train, test_data = datasets.IMDB.splits(TEXT, LABEL) # 25,000 training and 25,000 testing data
 train_data, valid_data = train.split(split_ratio=0.8) # split training data into 20,000 training and 5,000 vlidation sample
 
@@ -101,12 +102,13 @@ criterion = nn.CrossEntropyLoss().to(device)
 # set up models
 clstm = CNN_LSTM(INPUT_DIM, EMBEDDING_DIM, KER_SIZE, N_FILTERS, HIDDEN_DIM).to(device)
 policy_s = Policy_S(HIDDEN_DIM, HIDDEN_DIM, OUTPUT_DIM).to(device)
+policy_n = Policy_N(HIDDEN_DIM, HIDDEN_DIM, MAX_K).to(device)
 policy_c = Policy_C(HIDDEN_DIM, HIDDEN_DIM, LABEL_DIM).to(device)
 value_net = ValueNetwork(HIDDEN_DIM, HIDDEN_DIM, OUTPUT_DIM).to(device)
 
 
 # set up optimiser
-params_pg = list(policy_s.parameters()) + list(policy_c.parameters())
+params_pg = list(policy_s.parameters()) + list(policy_c.parameters()) + list(policy_n.parameters())
 optim_loss = optim.Adam(clstm.parameters(), lr=learning_rate)
 optim_policy = optim.Adam(params_pg, lr=learning_rate)
 optim_value = optim.Adam(value_net.parameters(), lr=learning_rate)
@@ -115,6 +117,9 @@ optim_value = optim.Adam(value_net.parameters(), lr=learning_rate)
 pretrained_embeddings = TEXT.vocab.vectors
 clstm.embedding.weight.data.copy_(pretrained_embeddings)
 clstm.embedding.weight.requires_grad = True  # update the initial weights
+
+# set the default tensor type for GPU
+#torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 def finish_episode(policy_loss_sum, encoder_loss_sum, baseline_value_batch):
     '''
@@ -134,7 +139,7 @@ def finish_episode(policy_loss_sum, encoder_loss_sum, baseline_value_batch):
     optim_loss.step()
     optim_policy.step()
     optim_value.step()
-
+    
 
 def main():
     '''
@@ -145,86 +150,108 @@ def main():
         print('\nEpoch', epoch+1)
         # log the start time of the epoch
         start = time.time()
+        # set the models in training mode
         clstm.train()
-        policy_c.train()
         policy_s.train()
+        policy_n.train()
+        policy_c.train()
+        # reset the count of reread_or_skim_times
+        reread_or_skim_times = 0
         policy_loss_sum = []
         encoder_loss_sum = []
         baseline_value_batch = []
         for index, train in enumerate(train_iterator):
-            label = train.label.to(torch.long) # 64
+            label = train.label.to(torch.long)  # for cross entropy loss, the long type is required
             text = train.text.view(CHUNCK_SIZE, BATCH_SIZE, CHUNCK_SIZE) # transform 1*400 to 20*1*20
-            curr_step = 0
-            # set up the initial input for lstm
-            h_0 = torch.zeros([1,1,128]).to(device) 
-            saved_log_probs = []
+            curr_step = 0  # the position of the current chunk
+            h_0 = torch.zeros([1,1,128]).to(device)  # run on GPU
+            count = 0  # maximum skim/reread time: 5
             baseline_value_ep = []
-            cost_ep = []   # collect the computational costs for every time step
-            while (curr_step < 20):
-                '''
-                loop until stop decision equals 1 
-                or the whole text has been read
-                '''
-                # read a chunk
-                text_input = text[curr_step]
-                # hidden state
+            saved_log_probs = []  # for the use of policy gradient update
+            while curr_step < CHUNCK_SIZE and count < 5: 
+                # Loop until a text can be classified or currstep is up to 20 or count reach the maximum i.e. 5.
+                # update count
+                count += 1
+                # pass the input through cnn-lstm and policy s
+                text_input = text[curr_step] # text_input 1*20
                 ht = clstm(text_input, h_0)  # 1 * 128
-                h_0 = ht.unsqueeze(0).to(device)  # 1 * 1 * 128, next input of lstm
+                # separate the value which is the input of value net
+                ht_ = ht.clone().detach().requires_grad_(True)
                 # compute a baseline value for the value network
-                ht_ = ht.clone().detach().requires_grad_(True).to(device)
                 bi = value_net(ht_)
+                # 1 * 1 * 128, next input of lstm
+                h_0 = ht.unsqueeze(0)
                 # draw a stop decision
                 stop_decision, log_prob_s = sample_policy_s(ht, policy_s)
                 stop_decision = stop_decision.item()
-                if stop_decision == 1:
+                if stop_decision == 1: # classify
                     break
-                else:
-                    curr_step += 1
-                    if curr_step < 20:
+                else: 
+                    reread_or_skim_times += 1
+                    # draw an action (reread or skip)
+                    step, log_prob_n = sample_policy_n(ht, policy_n)
+                    curr_step += int(step)  # reread or skip
+                    if curr_step < CHUNCK_SIZE and count < 5:
                         # If the code can still execute the next loop, it is not the last time step.
-                        cost_ep.append(clstm_cost + s_cost)
                         # add the baseline value
-                        saved_log_probs.append(log_prob_s)
                         baseline_value_ep.append(bi)
-                    
-            # add the baseline value at the last step
-            baseline_value_ep.append(bi)
-            cost_ep.append(clstm_cost + s_cost + c_cost)
-            # output of classifier       
-            output_c = policy_c(ht)  # classifier
-            # compute cross entropy loss
-            loss = criterion(output_c, label)
-            encoder_loss_sum.append(loss)
+                        # add the log prob for the current actions
+                        saved_log_probs.append(log_prob_s + log_prob_n)
+            # draw a predicted label
+            output_c = policy_c(ht)
+            # cross entrpy loss input shape: input(N, C), target(N)
+            loss = criterion(output_c, label)  # positive value
             # draw a predicted label 
             pred_label, log_prob_c = sample_policy_c(output_c)
-            saved_log_probs.append(log_prob_c.unsqueeze(0) + log_prob_s)
+            if stop_decision == 1:
+                saved_log_probs.append(log_prob_s + log_prob_c)
+            else:
+                # At the moment, the probability of drawing a stop decision is 1,
+                # so its log probability is zero which can be ignored in th sum.
+                saved_log_probs.append(log_prob_c.unsqueeze(0))
+            # add the baseline value
+            baseline_value_ep.append(bi)
+            # add the cross entropy loss
+            encoder_loss_sum.append(loss)
+            # set reward for the current data sample
+            if pred_label.item() == label:
+                reward = 1 
+            else:
+                reward = -1 
             # compute the policy losses and value losses for the current episode
-            policy_loss_ep, value_losses = compute_policy_value_losses(cost_ep, loss, saved_log_probs, baseline_value_ep, alpha, gamma)
+            policy_loss_ep = []
+            value_losses = []
+            for i, log_prob in enumerate(saved_log_probs):
+                # baseline_value_ep[i].item(): updating the policy loss doesn't include the gradient of baseline values
+                advantage = reward - baseline_value_ep[i].item()
+                policy_loss_ep.append(log_prob * advantage)
+                value_losses.append((torch.tensor([reward]).to(torch.float32) - baseline_value_ep[i]) ** 2)
             policy_loss_sum.append(torch.cat(policy_loss_ep).sum())
             baseline_value_batch.append(torch.cat(value_losses).sum())
-            # Backward and optimize
-            if (index + 1) % batch_sz == 0:
+            # update gradients
+            if (index + 1) % batch_sz == 0:  # take the average of 50 samples
                 finish_episode(policy_loss_sum, encoder_loss_sum, baseline_value_batch)
-                del policy_loss_sum[:], encoder_loss_sum[:], baseline_value_batch[:]  
-            
-            # print log
+                del policy_loss_sum[:], encoder_loss_sum[:], baseline_value_batch[:]
+                
             if (index + 1) % 2000 == 0:
                 print(f'\n current episode: {index + 1}')
                 # log the current position of the text which the agent has gone through
                 print('curr_step: ', curr_step)
+                # log the sum of the rereading and skimming times
+                print(f'current reread_or_skim_times: {reread_or_skim_times}')
+
+
         print('Epoch time elapsed: %.2f s' % (time.time() - start))
-        count_all, count_correct = evaluate_earlystop(clstm, policy_s, policy_c, valid_iterator)
+        print('reread_or_skim_times in this epoch:', reread_or_skim_times)
+        count_all, count_correct = evaluate(clstm, policy_s, policy_n, policy_c, valid_iterator)
         print('Epoch: %s, Accuracy on the validation set: %.2f' % (epoch + 1, count_correct / count_all))
-        count_all, count_correct = evaluate_earlystop(clstm, policy_s, policy_c, train_iterator)
+        count_all, count_correct = evaluate(clstm, policy_s, policy_n, policy_c, train_iterator)
         print('Epoch: %s, Accuracy on the training set: %.2f' % (epoch + 1, count_correct / count_all))
-    
+        
     print('Compute the accuracy on the testing set...')
-    count_all, count_correct = evaluate_earlystop(clstm, policy_s, policy_c, test_iterator)
+    count_all, count_correct = evaluate(clstm, policy_s, policy_n, policy_c, test_iterator)
     print('Accuracy on the testing set: %.2f' % (count_correct / count_all))
 
 
 if __name__ == '__main__':
     main()
-            
-
-

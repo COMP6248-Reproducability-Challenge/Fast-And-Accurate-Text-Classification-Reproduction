@@ -8,7 +8,7 @@ import torch
 from torch import optim
 from torch import nn
 import torch.nn.functional as F
-from torch.distributions import Bernoulli, Multinomial, Categorical
+from torch.distributions import Bernoulli, Categorical
 from torchtext import datasets
 from torchtext import data
 import os
@@ -19,6 +19,7 @@ import argparse
 
 from networks import CNN_LSTM, Policy_C, Policy_N, Policy_S, ValueNetwork
 from utils import sample_policy_c, sample_policy_n, sample_policy_s, evaluate, compute_policy_value_losses
+from utils import cnn_cost, clstm_cost, c_cost, n_cost, s_cost
 
 desc = '''
 A PyTorch model with Skimming, rereading, and early stopping.
@@ -87,20 +88,7 @@ BATCH_SIZE = 1
 gamma = args.gamma
 alpha = args.alpha
 learning_rate = 0.001
-'''Compute FLOPs(Floating point operations) of the models.
-Specify the computational costs for the models above
 
-cnn_cost: CNN model(which is separated from CNN_LSTM above)
-s_cost: policy s(stopping module)
-c_cost: policy c(classifier)
-lstm_cost: LSTM model(which is separated from CNN_LSTM above)
-'''
-cnn_cost = 1024000
-s_cost = 50050
-c_cost = 16770 
-n_cost = 50310
-lstm_cost = 286720
-clstm_cost = cnn_cost + lstm_cost
 # the number of training epoches
 num_of_epoch = 10
 # the number of batch size for gradient descent when training

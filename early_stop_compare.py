@@ -2,7 +2,11 @@
 The early stopping model with only a stopping module.
 
 Use REINFORCE with baseline.
-Use discounted rewards for an episode.
+
+
+Reward function:
+Use a single reward for an episode.
+If the prediction is correct, the reward is 1. Else the reward is -1.
 '''
 import torch
 from torch import optim
@@ -28,10 +32,10 @@ Use REINFORCE with baseline.
 Use discounted rewards for an episode.
 '''
 parser = argparse.ArgumentParser(description=desc)
-parser.add_argument('--alpha', type=float, default=0.2, metavar='A',
-                    help='a trade-off parameter between accuracy and efficiency (default: 0.2)')
-parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
-                    help='discount factor (default: 0.99)')
+# parser.add_argument('--alpha', type=float, default=0.2, metavar='A',
+#                     help='a trade-off parameter between accuracy and efficiency (default: 0.2)')
+# parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
+#                     help='discount factor (default: 0.99)')
 parser.add_argument('--seed', type=int, default=2019, metavar='S',
                     help='random seed (default: 2019)')
 args = parser.parse_args()
@@ -86,9 +90,8 @@ CHUNCK_SIZE = 20
 MAX_K = 4  # the output dimension for step size 0, 1, 2, 3
 LABEL_DIM = 2
 N_FILTERS = 128
-BATCH_SIZE = 1
-gamma = args.gamma
-alpha = args.alpha
+# gamma = args.gamma
+# alpha = args.alpha
 learning_rate = 0.001
 
 # the number of training epoches
@@ -152,14 +155,13 @@ def main():
         encoder_loss_sum = []
         baseline_value_batch = []
         for index, train in enumerate(train_iterator):
-            label = train.label.to(torch.long) # 64
+            label = train.label.to(torch.long)
             text = train.text.view(CHUNCK_SIZE, BATCH_SIZE, CHUNCK_SIZE) # transform 1*400 to 20*1*20
             curr_step = 0
             # set up the initial input for lstm
             h_0 = torch.zeros([1,1,128]).to(device) 
             saved_log_probs = []
             baseline_value_ep = []
-            cost_ep = []   # collect the computational costs for every time step
             while (curr_step < 20):
                 '''
                 loop until stop decision equals 1 
@@ -182,14 +184,12 @@ def main():
                     curr_step += 1
                     if curr_step < 20:
                         # If the code can still execute the next loop, it is not the last time step.
-                        cost_ep.append(clstm_cost + s_cost)
                         # add the baseline value
                         saved_log_probs.append(log_prob_s)
                         baseline_value_ep.append(bi)
                     
             # add the baseline value at the last step
             baseline_value_ep.append(bi)
-            cost_ep.append(clstm_cost + s_cost + c_cost)
             # output of classifier       
             output_c = policy_c(ht)  # classifier
             # compute cross entropy loss
@@ -198,8 +198,20 @@ def main():
             # draw a predicted label 
             pred_label, log_prob_c = sample_policy_c(output_c)
             saved_log_probs.append(log_prob_c.unsqueeze(0) + log_prob_s)
+            # set reward
+            if pred_label.item() == label:
+                reward = 1
+            else:
+                reward = -1
             # compute the policy losses and value losses for the current episode
-            policy_loss_ep, value_losses = compute_policy_value_losses(cost_ep, loss, saved_log_probs, baseline_value_ep, alpha, gamma)
+            policy_loss_ep = []
+            value_losses = []
+            for i, log_prob in enumerate(saved_log_probs):
+                # baseline_value_ep[i].item(): updating the policy loss doesn't include the gradient of baseline values
+                advantage = reward - baseline_value_ep[i].item()
+                policy_loss_ep.append(log_prob * advantage)
+                value_losses.append((torch.tensor([reward]).to(torch.float32) - baseline_value_ep[i]) ** 2) 
+            
             policy_loss_sum.append(torch.cat(policy_loss_ep).sum())
             baseline_value_batch.append(torch.cat(value_losses).sum())
             # Backward and optimize
@@ -225,6 +237,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-            
-
-

@@ -15,6 +15,9 @@ cnn_cost: CNN model(which is separated from CNN_LSTM above)
 s_cost: policy s(stopping module)
 c_cost: policy c(classifier)
 lstm_cost: LSTM model(which is separated from CNN_LSTM above)
+cnn_whole: CNN model with whole reading(400 words).
+
+The costs below are based on the size of one chunk(20 words).
 '''
 cnn_cost = 1024000
 s_cost = 50050
@@ -22,6 +25,7 @@ c_cost = 16770
 n_cost = 50310
 lstm_cost = 286720
 clstm_cost = cnn_cost + lstm_cost
+cnn_whole = 25344000
 
 
 def sample_policy_s(ht, policy_s):
@@ -129,6 +133,10 @@ def evaluate(clstm, policy_s, policy_n, policy_c, iterator):
 
 
 def evaluate_earlystop(clstm, policy_s, policy_c, iterator):
+    '''
+    Evaluate a early stopping model with only a stopping module
+    and compute the average FLOPs per data.
+    '''
     # set the models in evaluation mode
     clstm.eval()
     policy_s.eval()
@@ -186,6 +194,8 @@ def print_model_parm_flops(model, input):
     list_conv=[]
     def conv_hook(self, input, output):
         batch_size, input_channels, input_height, input_width = input[0].size()
+        print('input size', input[0].size())
+        print('output size:', output[0].size())
         output_channels, output_height, output_width = output[0].size()
         kernel_ops = self.kernel_size[0] * self.kernel_size[1] * (self.in_channels / self.groups) * (2 if multiply_adds else 1)-1
         bias_ops = 1 if self.bias is not None else 0
@@ -249,7 +259,8 @@ def print_model_parm_flops(model, input):
         for c in childrens:
                 foo(c)
     foo(model)
-    out = model(input.cuda())
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    out = model(input.to(device))
     total_flops = (sum(list_conv) + sum(list_linear) + sum(list_bn) + sum(list_relu) + sum(list_pooling) + sum(list_sig) +sum(list_softmax)) 
     return total_flops
 
