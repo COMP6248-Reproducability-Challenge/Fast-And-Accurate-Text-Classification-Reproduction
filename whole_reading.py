@@ -134,7 +134,8 @@ def main():
         for index, train in enumerate(train_iterator):
             label = train.label              # output_dim:64
             text = train.text.transpose(0,1) #: 64, 400
-            ht = clstm(text)                 #: 64, 128
+            h_0 = torch.zeros([1, BATCH_SIZE, 128]).to(device)
+            ht = clstm(text, h_0)                 #: 64, 128
             label_raws = policy_c(ht)
             optimizer.zero_grad()
             loss = criterion(label_raws.squeeze(), label.to(torch.long))

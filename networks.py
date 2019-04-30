@@ -51,11 +51,12 @@ class CNN_LSTM(nn.Module):
         conved = self.relu(self.conv(embedded.unsqueeze(1)))  # 1 * 128 * 16 * 1
         #print(conved.size())
         # conv -> relu -> dropout
+        batch = conved.size()[0]
         conved = self.dropout(conved)
         conved = conved.squeeze(3)  # 1 * 128 * 16
         conved = torch.transpose(conved, 1, 2)  # 1 * 16 * 128
         conved = torch.transpose(conved, 1, 0)  # 16 * 1 * 128
-        c_0 = torch.zeros([1, 1, 128]).to(device)
+        c_0 = torch.zeros([1, batch, 128]).to(device)
         output, (hidden, cell) = self.lstm(conved, (h_0, c_0))
         ht = hidden.squeeze(0)  # 1 * 128
         return ht
