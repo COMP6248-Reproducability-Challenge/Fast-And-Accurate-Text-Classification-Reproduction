@@ -1,7 +1,11 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # reproducibility_challenge
 =======
 # reproducibility_challenge
+=======
+# Reproducibility Challenge
+>>>>>>> ddf6acc10a385e57c1ea7536efb5827c769040e8
 
 
 <<<<<<< HEAD
