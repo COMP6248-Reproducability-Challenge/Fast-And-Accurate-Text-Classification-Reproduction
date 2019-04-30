@@ -54,7 +54,7 @@ print(f'Number of training examples: {len(train_data)}')
 print(f'Number of validation examples: {len(valid_data)}')
 print(f'Number of testing examples: {len(test_data)}')
 
-MAX_VOCAB_SIZE = 25_000
+MAX_VOCAB_SIZE = 25000
 
 # use pretrained embedding of glove
 print('Building vocabulary...')
@@ -124,6 +124,7 @@ def main():
     '''
     Training and evaluation of the model.
     '''
+    print('training starts...')
     for epoch in range(num_of_epoch):
         clstm.train()
         policy_c.train()

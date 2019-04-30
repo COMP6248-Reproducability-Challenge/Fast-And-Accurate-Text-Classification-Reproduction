@@ -56,7 +56,7 @@ train_data, valid_data = train.split(split_ratio=0.8) # split training data into
 # print(f'Number of validation examples: {len(valid_data)}')
 # print(f'Number of testing examples: {len(test_data)}')
 
-MAX_VOCAB_SIZE = 25_000
+MAX_VOCAB_SIZE = 25000
 
 # use pretrained embedding of glove
 print('Building vocabulary...')
