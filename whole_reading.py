@@ -19,8 +19,8 @@ import argparse
 from sklearn.metrics import accuracy_score
 
 from networks import CNN_LSTM, Policy_C, Policy_N, Policy_S, ValueNetwork
-from utils import sample_policy_c, sample_policy_n, sample_policy_s, evaluate_earlystop, compute_policy_value_losses
-from utils import cnn_cost, lstm_cost, c_cost, n_cost, s_cost, cnn_whole
+from utils.utils import sample_policy_c, sample_policy_n, sample_policy_s, evaluate_earlystop, compute_policy_value_losses
+from utils.utils import cnn_cost, lstm_cost, c_cost, n_cost, s_cost, cnn_whole
 
 desc = '''
 The whole reading model.

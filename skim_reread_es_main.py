@@ -18,8 +18,8 @@ import random
 import argparse
 
 from networks import CNN_LSTM, Policy_C, Policy_N, Policy_S, ValueNetwork
-from utils import sample_policy_c, sample_policy_n, sample_policy_s, evaluate, compute_policy_value_losses
-from utils import cnn_cost, clstm_cost, c_cost, n_cost, s_cost
+from utils.utils import sample_policy_c, sample_policy_n, sample_policy_s, evaluate, compute_policy_value_losses
+from utils.utils import cnn_cost, clstm_cost, c_cost, n_cost, s_cost
 
 desc = '''
 A PyTorch model with Skimming, rereading, and early stopping.
@@ -52,9 +52,9 @@ print('Splitting data...')
 train, test_data = datasets.IMDB.splits(TEXT, LABEL) # 25,000 training and 25,000 testing data
 train_data, valid_data = train.split(split_ratio=0.8) # split training data into 20,000 training and 5,000 vlidation sample
 
-# print(f'Number of training examples: {len(train_data)}')
-# print(f'Number of validation examples: {len(valid_data)}')
-# print(f'Number of testing examples: {len(test_data)}')
+print(f'Number of training examples: {len(train_data)}')
+print(f'Number of validation examples: {len(valid_data)}')
+print(f'Number of testing examples: {len(test_data)}')
 
 MAX_VOCAB_SIZE = 25000
 
