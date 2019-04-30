@@ -210,7 +210,7 @@ def main():
                 # baseline_value_ep[i].item(): updating the policy loss doesn't include the gradient of baseline values
                 advantage = reward - baseline_value_ep[i].item()
                 policy_loss_ep.append(log_prob * advantage)
-                value_losses.append((torch.tensor([reward]).to(torch.float32) - baseline_value_ep[i]) ** 2) 
+                value_losses.append((reward - baseline_value_ep[i]) ** 2) 
             
             policy_loss_sum.append(torch.cat(policy_loss_ep).sum())
             baseline_value_batch.append(torch.cat(value_losses).sum())
