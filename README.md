@@ -22,7 +22,7 @@ see file [requirements.txt](COMP6248-Polaris/blob/master/requirements.txt)
 
 Example: 
 ```
-python whole_reading --seed 2019
+python whole_reading.py --seed 2019
 python skim_reread_es_main.py --alpha 0.2 --gamma 0.95
 ```
 
