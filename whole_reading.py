@@ -108,7 +108,9 @@ def evaluate(iterator):
     for index, valid in enumerate(iterator):
         label = valid.label
         text = valid.text.transpose(0,1)
-        ht = clstm(text)
+        batch_size = label.size()[0]
+        h_0 = torch.zeros([1, batch_size, 128]).to(device)
+        ht = clstm(text, h_0)
         label_raws = policy_c(ht)
         label_probs = F.softmax(label_raws, dim=1)
         m = Categorical(label_probs)
@@ -134,7 +136,8 @@ def main():
         for index, train in enumerate(train_iterator):
             label = train.label              # output_dim:64
             text = train.text.transpose(0,1) #: 64, 400
-            h_0 = torch.zeros([1, BATCH_SIZE, 128]).to(device)
+            batch_size = label.size()[0]
+            h_0 = torch.zeros([1, batch_size, 128]).to(device)
             ht = clstm(text, h_0)                 #: 64, 128
             label_raws = policy_c(ht)
             optimizer.zero_grad()
