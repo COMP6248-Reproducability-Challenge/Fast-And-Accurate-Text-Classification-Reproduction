@@ -6,6 +6,7 @@
 -------------------------------
 ## Introduction
 We implemented two baseines and proposed model in the chosen paper and two variances adopted the reward definition from referenced paper as comparison. IMDB dataset was used.
+
 Models in the paper:
 - whole reading model
 - early stopping model
@@ -18,6 +19,7 @@ Models as comparison:
 see file [requirements.txt](COMP6248-Polaris/blob/master/requirements.txt)
 ## Useage
 `python [model_name.py] {--parameter value |--paramter value}`
+
 Example: 
 ```
 python whole_reading --seed 2019
