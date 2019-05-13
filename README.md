@@ -20,7 +20,7 @@ see file [requirements.txt](COMP6248-Polaris/blob/master/requirements.txt)
 `python [model_name.py] [--parameter value]*`
 
 ```
---seed  # randome seed
+--seed  # random seed
 --alpha # trade off between efficiency(computation cost measured in FLOPs) and accuracy
 --gamma # discount factor
 ```
