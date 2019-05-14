@@ -15,7 +15,7 @@ Models as comparison:
 - early stopping model with different reward
 - skim, reread and early stopping with different reward
 ## Requirement
-see file [requirements.txt](COMP6248-Polaris/blob/master/requirements.txt)
+see file [requirements.txt](requirements.txt)
 ## Usage
 `python [model_name.py] [--parameter value]*`
 
