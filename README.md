@@ -31,7 +31,8 @@ python whole_reading.py
 python whole_reading.py --seed 2019
 python skim_reread_es_main.py --alpha 0.2 --gamma 0.95
 ```
-
-
+## Notes
+We are still testing the [whole_reading.py](COMP6248-Polaris/blob/master/whole_reading.py), currently it tends to breakdown under error:"out of memory". We will upload the fixed version as soon as possible.
+Therefore we have provided a jupyter notebook version which is in the [jupyter_notebook](COMP6248-Polaris/blob/master/jupyter_notebook).
 
 
