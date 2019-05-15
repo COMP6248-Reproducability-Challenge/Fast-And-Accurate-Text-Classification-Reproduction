@@ -17,7 +17,7 @@ Models as comparison:
 ## Requirement
 see file [requirements.txt](requirements.txt)
 ## Usage
-`python [model_name.py] [--parameter value]*`
+`python [model_name.py] [--parameter value]`
 
 ```
 --seed  # random seed
@@ -32,7 +32,6 @@ python whole_reading.py --seed 2019
 python skim_reread_es_main.py --alpha 0.2 --gamma 0.95
 ```
 ## Notes
-We are still testing the [whole_reading.py](whole_reading.py), currently it tends to breakdown under error:"out of memory". We will upload the fixed version as soon as possible.
-Therefore we have provided a jupyter notebook version which is in the [jupyter_notebook](../master/jupyter_notebook).
+We are still testing the [whole_reading.py](whole_reading.py), currently it tends to breakdown with the error:"out of memory". Therefore we have provided a [jupyter_notebook](../master/jupyter_notebook) version which runs correctly under Google Colab with GPU turned on.
 
 
