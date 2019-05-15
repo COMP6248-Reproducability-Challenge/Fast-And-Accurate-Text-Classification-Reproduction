@@ -1,17 +1,17 @@
 
-# Reproducibility Challenge
+# Fast-And-Accurate-Text-Classification-Reproduction
 - Chosen paper: [FAST AND ACCURATE TEXT CLASSIFICATION: SKIMMING, REREADING AND EARLY STOPPING](https://openreview.net/forum?id=ryZ8sz-Ab)
 - Referenced paper: [LEARN TO SKIM](https://arxiv.org/abs/1704.06877)
 
 ## Introduction
-We implemented two baseines and proposed model from the chosen paper and two variances which used the reward definition from referenced paper as comparison. IMDB dataset was used.
+We implement two baseine models and the proposed model from the chosen paper and two variation models which use the reward definition from the referenced paper [LEARN TO SKIM](https://arxiv.org/abs/1704.06877) for the use of comparison. IMDB dataset is used.
 
 Models in the paper:
 - whole reading model
 - early stopping model
 - skim, reread and early stopping
 
-Models as comparison:
+Models for comparison:
 - early stopping model with different reward
 - skim, reread and early stopping with different reward
 ## Requirement
