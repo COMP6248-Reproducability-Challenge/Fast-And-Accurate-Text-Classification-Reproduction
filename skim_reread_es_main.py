@@ -90,9 +90,9 @@ alpha = args.alpha
 learning_rate = 0.001
 
 # the number of training epoches
-num_of_epoch = 10
+num_of_epoch = 8
 # the number of batch size for gradient descent when training
-batch_sz = 50
+batch_sz = 64
 
 # set up the criterion
 criterion = nn.CrossEntropyLoss().to(device)
@@ -163,6 +163,7 @@ def main():
             text = train.text.view(CHUNCK_SIZE, BATCH_SIZE, CHUNCK_SIZE) # transform 1*400 to 20*1*20
             curr_step = 0  # the position of the current chunk
             h_0 = torch.zeros([1,1,128]).to(device)  # run on GPU
+            c_0 = torch.zeros([1,1,128]).to(device)
             count = 0  # maximum skim/reread time: 5
             baseline_value_ep = []
             saved_log_probs = []  # for the use of policy gradient update
@@ -174,13 +175,14 @@ def main():
                 count += 1
                 # pass the input through cnn-lstm and policy s
                 text_input = text[curr_step] # text_input 1*20
-                ht = clstm(text_input, h_0)  # 1 * 128
+                ht, ct = clstm(text_input, h_0, c_0)  # 1 * 128
                 # separate the value which is the input of value net
                 ht_ = ht.clone().detach().requires_grad_(True)
                 # compute a baseline value for the value network
                 bi = value_net(ht_)
                 # 1 * 1 * 128, next input of lstm
                 h_0 = ht.unsqueeze(0)
+                c_0 = ct
                 # draw a stop decision
                 stop_decision, log_prob_s = sample_policy_s(ht, policy_s)
                 stop_decision = stop_decision.item()
@@ -223,7 +225,7 @@ def main():
             policy_loss_sum.append(torch.cat(policy_loss_ep).sum())
             baseline_value_batch.append(torch.cat(value_losses).sum())
             # update gradients
-            if (index + 1) % batch_sz == 0:  # take the average of 50 samples
+            if (index + 1) % batch_sz == 0:  # take the average of samples, backprop
                 finish_episode(policy_loss_sum, encoder_loss_sum, baseline_value_batch)
                 del policy_loss_sum[:], encoder_loss_sum[:], baseline_value_batch[:]
                 

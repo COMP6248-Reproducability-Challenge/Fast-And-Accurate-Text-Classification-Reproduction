@@ -100,13 +100,15 @@ def evaluate(clstm, policy_s, policy_n, policy_c, iterator):
             text = batch.text.view(CHUNCK_SIZE, BATCH_SIZE, CHUNCK_SIZE) # transform 1*400 to 20*1*20
             curr_step = 0
             h_0 = torch.zeros([1,1,128]).to(device)
+            c_0 = torch.zeros([1,1,128]).to(device)
             count = 0
             while curr_step < 20 and count < 5: # loop until a text can be classified or currstep is up to 20
                 count += 1
                 # pass the input through cnn-lstm and policy s
                 text_input = text[curr_step] # text_input 1*20
-                ht = clstm(text_input, h_0)  # 1 * 128
+                ht, ct = clstm(text_input, h_0, c_0)  # 1 * 128
                 h_0 = ht.unsqueeze(0)  # 1 * 1 * 128, next input of lstm
+                c_0 = ct
                 # draw a stop decision
                 stop_decision, log_prob_s = sample_policy_s(ht, policy_s)
                 flops_sum += clstm_cost + s_cost
@@ -152,7 +154,8 @@ def evaluate_earlystop(clstm, policy_s, policy_c, iterator):
             text = batch.text.view(CHUNCK_SIZE, BATCH_SIZE, CHUNCK_SIZE) # transform 1*400 to 20*1*20
             curr_step = 0
             # set up the initial input for lstm
-            h_0 = torch.zeros([1,1,128]).to(device) 
+            h_0 = torch.zeros([1,1,128]).to(device)
+            c_0 = torch.zeros([1,1,128]).to(device)
             saved_log_probs = []
             while (curr_step < 20):
                 '''
@@ -162,8 +165,9 @@ def evaluate_earlystop(clstm, policy_s, policy_c, iterator):
                 # read a chunk
                 text_input = text[curr_step]
                 # hidden state
-                ht = clstm(text_input, h_0)  # 1 * 128
+                ht, ct = clstm(text_input, h_0, c_0)  # 1 * 128
                 h_0 = ht.unsqueeze(0).cuda()  # 1 * 1 * 128, next input of lstm
+                c_0 = ct
                 # draw a stop decision
                 stop_decision, log_prob_s = sample_policy_s(ht, policy_s)
                 stop_decision = stop_decision.item()
