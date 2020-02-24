@@ -99,7 +99,7 @@ learning_rate = 0.001
 # the number of training epoches
 num_of_epoch = 10
 # the number of batch size for gradient descent when training
-batch_sz = 50
+batch_sz = 64
 
 # set up the criterion
 criterion = nn.CrossEntropyLoss().to(device)
@@ -161,7 +161,8 @@ def main():
             text = train.text.view(CHUNCK_SIZE, BATCH_SIZE, CHUNCK_SIZE) # transform 1*400 to 20*1*20
             curr_step = 0
             # set up the initial input for lstm
-            h_0 = torch.zeros([1,1,128]).to(device) 
+            h_0 = torch.zeros([1,1,128]).to(device)
+            c_0 = torch.zeros([1,1,128]).to(device)
             saved_log_probs = []
             baseline_value_ep = []
             while (curr_step < 20):
@@ -172,8 +173,9 @@ def main():
                 # read a chunk
                 text_input = text[curr_step]
                 # hidden state
-                ht = clstm(text_input, h_0)  # 1 * 128
+                ht, ct = clstm(text_input, h_0, c_0)  # 1 * 128
                 h_0 = ht.unsqueeze(0).to(device)  # 1 * 1 * 128, next input of lstm
+                c_0 = ct
                 # compute a baseline value for the value network
                 ht_ = ht.clone().detach().requires_grad_(True).to(device)
                 bi = value_net(ht_)

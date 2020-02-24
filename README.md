@@ -4,7 +4,11 @@
 - Referenced paper: [LEARN TO SKIM](https://arxiv.org/abs/1704.06877)
 
 ## Introduction
-We implement two baseine models and the proposed model from the chosen paper and two variation models which use the reward definition from the referenced paper [LEARN TO SKIM](https://arxiv.org/abs/1704.06877) for the use of comparison. IMDB dataset is used.
+We implemented two baseine models and the proposed model from the chosen paper and two variation models which use the reward definition from the referenced paper [LEARN TO SKIM](https://arxiv.org/abs/1704.06877) for the use of comparison.
+
+The models were implemented from scratch.
+
+We only tested the models on the IMDB dataset for the task of sentiment analysis.
 
 Models in the paper:
 - whole reading model
@@ -14,6 +18,12 @@ Models in the paper:
 Models for comparison:
 - early stopping model with different reward
 - skim, reread and early stopping with different reward
+
+## Results
+We failed to reproduce the results as shown in the original paper due to several reasons such as missing details for the implementation. More discussion can be found in the report.
+
+For the result of IMDB dataset, our highest accuracy on the test set was 66% compared to the declared accuracy of about 89%. Later on, we found that we didn't use LSTM correctly when combined with the policy module, which is not shown in the report. After the correction, the highest accuracy increased to 77%.
+
 ## Requirement
 see file [requirements.txt](requirements.txt)
 ## Usage

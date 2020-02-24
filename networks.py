@@ -15,10 +15,10 @@ class CNN_LSTM(nn.Module):
         self.embedding = nn.Embedding(input_dim, embedding_dim)
         self.conv = nn.Conv2d(in_channels=1, out_channels=n_filters, kernel_size=(ker_size, embedding_dim))
         self.lstm = nn.LSTM(input_size=n_filters, hidden_size=hidden_dim)
-        self.dropout = nn.Dropout(p=0.1)
+        self.dropout = nn.Dropout(p=0.2)
         self.relu = nn.ReLU()
    
-    def forward(self, text, h_0):
+    def forward(self, text, h_0, c_0):
         # CNN and LSTM network
         '''
         At every time step, the model reads one chunk which has a size of 20 words.
@@ -56,10 +56,9 @@ class CNN_LSTM(nn.Module):
         conved = conved.squeeze(3)  # 1 * 128 * 16
         conved = torch.transpose(conved, 1, 2)  # 1 * 16 * 128
         conved = torch.transpose(conved, 1, 0)  # 16 * 1 * 128
-        c_0 = torch.zeros([1, batch, 128]).to(device)
         output, (hidden, cell) = self.lstm(conved, (h_0, c_0))
         ht = hidden.squeeze(0)  # 1 * 128
-        return ht
+        return ht, cell
 
 
 class Policy_S(nn.Module):
@@ -73,7 +72,7 @@ class Policy_S(nn.Module):
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         self.fc3 = nn.Linear(hidden_dim, hidden_dim)
         self.fc4 = nn.Linear(hidden_dim, output_dim)
-        self.dropout = nn.Dropout(p=0.1)
+        self.dropout = nn.Dropout(p=0.5)
         self.relu = nn.ReLU()
           
     def forward(self, ht):
@@ -104,7 +103,7 @@ class Policy_N(nn.Module):
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         self.fc3 = nn.Linear(hidden_dim, hidden_dim)
         self.fc4 = nn.Linear(hidden_dim, output_dim)
-        self.dropout = nn.Dropout(p=0.1)
+        self.dropout = nn.Dropout(p=0.5)
         self.relu = nn.ReLU()
         self.softmax = nn.Softmax(dim=1)
          
@@ -135,7 +134,7 @@ class Policy_C(nn.Module):
         super().__init__()
         #self.fc = nn.Linear(input_dim, output_dim)
         self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.dropout = nn.Dropout(p=0.1)
+        self.dropout = nn.Dropout(p=0.5)
         self.fc2 = nn.Linear(hidden_dim, output_dim)
         self.relu = nn.ReLU()
          
@@ -158,7 +157,7 @@ class ValueNetwork(nn.Module):
         super().__init__()
         #self.fc = nn.Linear(input_dim, output_dim)
         self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.dropout = nn.Dropout(p=0.1)
+        self.dropout = nn.Dropout(p=0.5)
         self.fc2 = nn.Linear(hidden_dim, output_dim)
         self.relu = nn.ReLU()
         
